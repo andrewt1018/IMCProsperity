@@ -41,9 +41,12 @@ class Trader:
                     # Update the new SMA by treating the 'average' numpy array as a queue (FIFO)
                     self.average = np.append(self.average, min(state.order_depths[product].sell_orders.keys()))
                 elif self.resolution_counter == self.resolution:  # Make market orders every 500 interval
+                    self.resolution_counter = 0  # Reset resolution counter
+
+                    print("SMA trading at: ", state.timestamp)
                     current_price = min(order_depth.sell_orders.keys())
-                    self.average[:-1] = self.average[1:]
-                    self.average[-1] = current_price
+                    # self.average[:-1] = self.average[1:]
+                    # self.average[-1] = current_price
 
                     sma = np.average(self.average)
                     print("New SMA: " + str(sma))
@@ -53,14 +56,14 @@ class Trader:
                         best_ask_volume = -order_depth.sell_orders[best_ask]
                         if bananas_position + best_ask_volume > pearls_position_limit:
                             best_ask_volume = pearls_position_limit - bananas_position  # Buy all position quota
-                        print("BUY", str(best_ask_volume) + "x", best_ask)
+                        print("BUY ", str(best_ask_volume) + " BANANAS", best_ask)
                         orders.append(Order(product, best_ask, best_ask_volume))
                     elif sma >= current_price:  # Sell if average is more than price
                         best_bid = max(order_depth.buy_orders.keys())
                         best_bid_volume = -order_depth.buy_orders[best_bid]
                         if bananas_position + best_bid_volume < (-1) * pearls_position_limit:
                             best_bid_volume = (-1) * pearls_position_limit - bananas_position
-                        print("SELL", str(best_bid_volume) + "x", best_bid)
+                        print("SELL ", str(best_bid_volume) + " BANANAS", best_bid)
                         orders.append(Order(product, best_bid, best_bid_volume))
 
                     result[product] = orders
@@ -68,27 +71,30 @@ class Trader:
                     self.resolution_counter = self.resolution_counter + 100
                     self.average[:-1] = self.average[1:]
                     self.average[-1] = min(state.order_depths[product].sell_orders.keys())
-            elif product == pearls:
+
+            if product == pearls:
                 min_ask = max(order_depth.sell_orders.keys())
                 max_buy = min(order_depth.buy_orders.keys())
-                mid_price = (max_buy + min_ask) / 2.0
-                if mid_price > self.pmax:
-                    self.pmax = mid_price
-                if mid_price < self.pmin:
-                    self.pmin = mid_price
+                if min_ask > self.pmax:
+                    self.pmax = min_ask
+                if max_buy < self.pmin:
+                    self.pmin = max_buy
                 self.price_range = self.pmax - self.pmin
+                print("pmax: ", self.pmax)
+                print("pmin: ", self.pmin)
 
-                # If current mid_price is within 10% of the range from the max, then sell everything
-                if self.pmax + self.epsilon * self.price_range > mid_price > self.pmax - self.epsilon * self.price_range:
+                # If current mid_price is within 50% of the range from the max, then sell everything
+                if min_ask >= self.pmax - self.epsilon * self.price_range:
                     sell_quantity = (-1) * pearls_position_limit - pearls_position  # Signed sell quantity
-                    min_sell_price = min(order_depth.sell_orders.keys())
-                    orders.append(Order(product, min_sell_price, sell_quantity))
+                    orders.append(Order(product, min_ask, sell_quantity))
+                    print("SELL ", str(sell_quantity) + " PEARLS", min_ask)
                     result[product] = orders
 
-                if self.pmin + self.epsilon * self.price_range > mid_price > self.pmin - self.epsilon * self.price_range:
+                if self.pmin + self.epsilon * self.price_range >= max_buy:
                     buy_quantity = pearls_position_limit - pearls_position  # Signed buy quantity
                     max_buy_price = max(order_depth.buy_orders.keys())
                     orders.append(Order(product, max_buy_price, buy_quantity))
+                    print("SELL ", str(buy_quantity) + " PEARLS", max_buy_price)
                     result[product] = orders
 
         return result
