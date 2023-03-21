@@ -2,7 +2,7 @@ import matplotlib.pyplot as plt
 import pandas as pd
 import numpy as np
 
-symbol = 'BANANAS'
+# symbol = 'BANANAS'
 
 data_day0 = pd.read_csv("Data/prices_round_1_day_0.csv")
 data_day_1 = pd.read_csv("Data/prices_round_1_day_-1.csv")
@@ -29,10 +29,11 @@ data_unfiltered.to_csv("Data/all_3_days.csv")
 # print(data.tail())
 # data.to_csv("Data/" + symbol + "_3_days.csv")
 
-x_pearls = data_unfiltered.drop(data_unfiltered.loc[data_unfiltered['product'] == 'PEARLS'].index)['timestamp']
-y_pearls = data_unfiltered.drop(data_unfiltered.loc[data_unfiltered['product'] == 'PEARLS'].index)['mid_price']
-x_bananas = data_unfiltered.drop(data_unfiltered.loc[data_unfiltered['product'] == 'BANANAS'].index)['timestamp']
-y_bananas = data_unfiltered.drop(data_unfiltered.loc[data_unfiltered['product'] == 'BANANAS'].index)['mid_price']
+# Mid price is calculate from the average of the largest bid and smallest ask prices for that timestamp
+x_pearls = data_unfiltered.drop(data_unfiltered.loc[data_unfiltered['product'] != 'PEARLS'].index)['timestamp']
+y_pearls = data_unfiltered.drop(data_unfiltered.loc[data_unfiltered['product'] != 'PEARLS'].index)['mid_price']
+x_bananas = data_unfiltered.drop(data_unfiltered.loc[data_unfiltered['product'] != 'BANANAS'].index)['timestamp']
+y_bananas = data_unfiltered.drop(data_unfiltered.loc[data_unfiltered['product'] != 'BANANAS'].index)['mid_price']
 
 ## Plotting data for PEARLS and BANANAS side by side
 # figure, axis = plt.subplots(1, 2)
