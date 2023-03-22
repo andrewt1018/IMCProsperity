@@ -32,9 +32,12 @@ data_unfiltered.to_csv("Data/all_3_days.csv")
 # Mid price is calculate from the average of the largest bid and smallest ask prices for that timestamp
 x_pearls = data_unfiltered.drop(data_unfiltered.loc[data_unfiltered['product'] != 'PEARLS'].index)['timestamp']
 y_pearls = data_unfiltered.drop(data_unfiltered.loc[data_unfiltered['product'] != 'PEARLS'].index)['mid_price']
+pearl_max_buy = data_unfiltered.drop(data_unfiltered.loc[data_unfiltered['product'] != 'PEARLS'].index)['bid_price_1']
+pearl_min_sell = data_unfiltered.drop(data_unfiltered.loc[data_unfiltered['product'] != 'PEARLS'].index)['ask_price_1']
 x_bananas = data_unfiltered.drop(data_unfiltered.loc[data_unfiltered['product'] != 'BANANAS'].index)['timestamp']
 y_bananas = data_unfiltered.drop(data_unfiltered.loc[data_unfiltered['product'] != 'BANANAS'].index)['mid_price']
-
+bananas_max_buy = data_unfiltered.drop(data_unfiltered.loc[data_unfiltered['product'] != 'BANANAS'].index)['bid_price_1']
+bananas_min_sell = data_unfiltered.drop(data_unfiltered.loc[data_unfiltered['product'] != 'BANANAS'].index)['ask_price_1']
 ## Plotting data for PEARLS and BANANAS side by side
 # figure, axis = plt.subplots(1, 2)
 # axis[0].plot(x_pearls, y_pearls)
@@ -47,7 +50,10 @@ y_bananas = data_unfiltered.drop(data_unfiltered.loc[data_unfiltered['product'] 
 # axis[1].set_ylabel("Mid_Price")
 # axis[1].set_title("Market for BANANAS")
 
-plt.plot(x_pearls, y_pearls)
+amt = 100
+plt.plot(x_bananas.head(amt), y_bananas.head(amt), label="Min_sell")
+plt.plot(x_bananas.head(amt), bananas_max_buy.head(amt), label="Min_sell")
+plt.plot(x_bananas.head(amt), bananas_min_sell.head(amt), label="Min_sell")
 plt.xlabel("Time stamp")
 plt.ylabel("Mid_Price")
 plt.title("Market for pearls")

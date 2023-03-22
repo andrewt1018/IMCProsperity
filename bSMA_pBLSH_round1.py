@@ -6,95 +6,133 @@ from datamodel import OrderDepth, TradingState, Order
 class Trader:
     def __init__(self):
         # Variables for SMA - BANANAS
-        self.warmup_period = 500
+        self.warmup_period = 1000
         self.average = np.array([])
-        self.resolution_counter = 0
-        self.resolution = 500
+        self.max_lot_size = 10
+        self.profit = 0
 
         # Variables for BLSH - PEARLS
         self.pmax = -1
         self.pmin = float('inf')
         self.price_range = 0
-        self.epsilon = 0.50
+        self.epsilon = 0.4
+        self.mid_range = [float('inf'), -1]
+        self.mid_prices = []
+        self.mid_prices_length = 20
+        self.quantity = 3
+
+        self.profit = 0
 
     def run(self, state: TradingState) -> Dict[str, List[Order]]:
-        pearls_position_limit = 20
-        bananas_position_limit = 20
         pearls = 'PEARLS'
         bananas = 'BANANAS'
+        pearls_position_limit = 20
+        bananas_position_limit = 20
+
+        bananas_position = state.position.get(bananas)
+        pearls_position = state.position.get(pearls)
+        if bananas_position is None:
+            bananas_position = 0
+        if pearls_position is None:
+            pearls_position = 0
+
+        # Calculate Revenue
+        if state.own_trades is not None:
+            for symbol in state.own_trades:
+                for trade in state.own_trades.get(symbol):
+                    if trade.timestamp == state.timestamp - 100:  # Ensure trade is from previous iteration
+                        if trade.seller == "":  # SUBMISSION << ""
+                            self.profit = self.profit - trade.price * trade.quantity
+                        elif trade.buyer == "":  # "" << SUBMISSION
+                            self.profit = self.profit + trade.price * trade.quantity
+        print("Profit: ", self.profit)
+
+        print("Positions: ", state.position)
+        print("Own trades: ", state.own_trades)
 
         result = {}
+
         for product in state.order_depths.keys():
             # Initialize the list of Orders to be sent as an empty list
             # Initialize other variables used in this scope
             orders: list[Order] = []
             order_depth: OrderDepth = state.order_depths[product]
-            bananas_position = state.position.get(bananas)
-            pearls_position = state.position.get(pearls)
-            if bananas_position is None:
-                bananas_position = 0
-            if pearls_position is None:
-                pearls_position = 0
 
             if product == bananas:  # SMA for BANANAS
                 if state.timestamp < self.warmup_period:
                     # Update the new SMA by treating the 'average' numpy array as a queue (FIFO)
-                    self.average = np.append(self.average, min(state.order_depths[product].sell_orders.keys()))
-                elif self.resolution_counter == self.resolution:  # Make market orders every 500 interval
-                    self.resolution_counter = 0  # Reset resolution counter
-
-                    print("SMA trading at: ", state.timestamp)
-                    current_price = min(order_depth.sell_orders.keys())
-                    # self.average[:-1] = self.average[1:]
-                    # self.average[-1] = current_price
+                    mid_price = (min(order_depth.sell_orders.keys()) + max(order_depth.buy_orders.keys())) / 2.0
+                    self.average = np.append(self.average, mid_price)
+                else:
+                    min_ask = min(order_depth.sell_orders.keys())
+                    max_buy = max(order_depth.buy_orders.keys())
+                    current_price = (min_ask + max_buy) / 2.0
+                    # Update SMA
+                    self.average[:-1] = self.average[1:]
+                    self.average[-1] = current_price
+                    print("self.average: ", self.average)
 
                     sma = np.average(self.average)
-                    print("New SMA: " + str(sma))
 
-                    if sma < current_price:  # Buy if average is less than price
-                        best_ask = min(order_depth.sell_orders.keys())
-                        best_ask_volume = -order_depth.sell_orders[best_ask]
-                        if bananas_position + best_ask_volume > pearls_position_limit:
-                            best_ask_volume = pearls_position_limit - bananas_position  # Buy all position quota
-                        print("BUY ", str(best_ask_volume) + " BANANAS", best_ask)
-                        orders.append(Order(product, best_ask, best_ask_volume))
-                    elif sma >= current_price:  # Sell if average is more than price
-                        best_bid = max(order_depth.buy_orders.keys())
-                        best_bid_volume = -order_depth.buy_orders[best_bid]
-                        if bananas_position + best_bid_volume < (-1) * pearls_position_limit:
-                            best_bid_volume = (-1) * pearls_position_limit - bananas_position
-                        print("SELL ", str(best_bid_volume) + " BANANAS", best_bid)
-                        orders.append(Order(product, best_bid, best_bid_volume))
-
+                    if sma < max_buy:  # Indicating a downwards trend
+                        # if best_bid >= sma - self.epsilon * average_range:
+                        best_bid_volume = max(-order_depth.buy_orders[max_buy],
+                                              -bananas_position_limit - bananas_position,
+                                              -self.max_lot_size)
+                        orders.append(Order(product, max_buy, best_bid_volume))
+                        print("SELL", str(best_bid_volume) + "BANANAS", max_buy)
+                    elif sma > min_ask:  # Indicating an upwards trend
+                        # if best_ask <= sma + self.epsilon * average_range:
+                        best_ask_volume = min(-order_depth.sell_orders[min_ask],
+                                              bananas_position_limit - bananas_position,
+                                              self.max_lot_size)
+                        orders.append(Order(product, min_ask, best_ask_volume))
+                        print("BUY ", str(best_ask_volume) + " BANANAS", min_ask)
                     result[product] = orders
-                else:  # Increment resolution counter and update self.average
-                    self.resolution_counter = self.resolution_counter + 100
-                    self.average[:-1] = self.average[1:]
-                    self.average[-1] = min(state.order_depths[product].sell_orders.keys())
 
             if product == pearls:
-                min_ask = max(order_depth.sell_orders.keys())
-                max_buy = min(order_depth.buy_orders.keys())
-                if min_ask > self.pmax:
-                    self.pmax = min_ask
-                if max_buy < self.pmin:
-                    self.pmin = max_buy
-                self.price_range = self.pmax - self.pmin
-                print("pmax: ", self.pmax)
-                print("pmin: ", self.pmin)
+                max_ask = max(order_depth.sell_orders.keys())
+                min_buy = min(order_depth.buy_orders.keys())
+                min_ask = min(order_depth.sell_orders.keys())
+                max_buy = max(order_depth.buy_orders.keys())
+                mid_price = (max_buy + min_ask) / 2.0
+                if len(self.mid_prices) < self.mid_prices_length:
+                    self.mid_prices.append(mid_price)
+                else:
+                    self.mid_prices[:-1] = self.mid_prices[1:]
+                    self.mid_prices[-1] = mid_price
 
-                # If current mid_price is within 50% of the range from the max, then sell everything
-                if min_ask >= self.pmax - self.epsilon * self.price_range:
-                    sell_quantity = (-1) * pearls_position_limit - pearls_position  # Signed sell quantity
-                    orders.append(Order(product, min_ask, sell_quantity))
-                    print("SELL ", str(sell_quantity) + " PEARLS", min_ask)
+                average = np.average(self.mid_prices)
+                if mid_price < self.mid_range[0]:
+                    self.mid_range[0] = mid_price
+                if mid_price > self.mid_range[1]:
+                    self.mid_range[1] = mid_price
+                self.price_range = self.mid_range[1] - self.mid_range[0]
+                if self.price_range == 0:
+                    continue
+
+                print("Mid_range: ", self.mid_range)
+                print("Mid_price: ", mid_price)
+
+                # If there is a significant shift upwards in the mid_price equivalent to
+                # or more than 50% of range, then SELL the maximum buy order
+                if max_buy >= average:
+                    sell_quantity = max(-order_depth.buy_orders.get(max_buy),
+                                        (-1) * pearls_position_limit - pearls_position)
+                    # sell_quantity = -self.quantity
+                    orders.append(Order(product, max_buy, sell_quantity))
+                    # orders.append(Order(product, round(mid_price), sell_quantity))
+                    print("SELL ", str(sell_quantity) + " PEARLS", max_buy)
+                    # print("SELL ", str(sell_quantity) + " PEARLS", round(mid_price))
                     result[product] = orders
 
-                if self.pmin + self.epsilon * self.price_range >= max_buy:
-                    buy_quantity = pearls_position_limit - pearls_position  # Signed buy quantity
-                    max_buy_price = max(order_depth.buy_orders.keys())
-                    orders.append(Order(product, max_buy_price, buy_quantity))
-                    print("SELL ", str(buy_quantity) + " PEARLS", max_buy_price)
+                if min_ask <= average:
+                    buy_quantity = min(-order_depth.sell_orders.get(min_ask), pearls_position_limit - pearls_position)  # Signed buy quantity
+                    # buy_quantity = self.quantity
+                    orders.append(Order(product, min_ask, buy_quantity))
+                    # orders.append(Order(product, round(mid_price), buy_quantity))
+                    print("BUY ", str(buy_quantity) + " PEARLS", min_ask)
+                    # print("BUY ", str(buy_quantity) + " PEARLS", round(mid_price))
                     result[product] = orders
 
         return result
