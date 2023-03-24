@@ -4,13 +4,13 @@ import numpy as np
 
 # symbol = 'BANANAS'
 
-data_day0 = pd.read_csv("Data/prices_round_1_day_0.csv")
-data_day_1 = pd.read_csv("Data/prices_round_1_day_-1.csv")
-data_day_2 = pd.read_csv("Data/prices_round_1_day_-2.csv")
+data_day0 = pd.read_csv("Data/prices_round_2_day_-1.csv")
+data_day_1 = pd.read_csv("Data/prices_round_2_day_0.csv")
+data_day_2 = pd.read_csv("Data/prices_round_2_day_1.csv")
 data_day_1['timestamp'] = data_day_1['timestamp'] + 1000000
-data_day0['timestamp'] = data_day0['timestamp'] + 2 * 1000000
-data_unfiltered = pd.concat([data_day_2, data_day_1, data_day0])
-data_unfiltered.to_csv("Data/all_3_days.csv")
+data_day_2['timestamp'] = data_day_2['timestamp'] + 2 * 1000000
+data_unfiltered = pd.concat([data_day0, data_day_1, data_day_2], ignore_index=True)
+data_unfiltered.to_csv("Data/all_3_days_round2.csv")
 
 ## Getting the data for the specified symbol by finding each day's data, then concatenating
 # x0 = data_day0.drop(data_day0.loc[data_day0['product'] != symbol].index)['timestamp']
@@ -30,14 +30,26 @@ data_unfiltered.to_csv("Data/all_3_days.csv")
 # data.to_csv("Data/" + symbol + "_3_days.csv")
 
 # Mid price is calculate from the average of the largest bid and smallest ask prices for that timestamp
-x_pearls = data_unfiltered.drop(data_unfiltered.loc[data_unfiltered['product'] != 'PEARLS'].index)['timestamp']
-y_pearls = data_unfiltered.drop(data_unfiltered.loc[data_unfiltered['product'] != 'PEARLS'].index)['mid_price']
-pearl_max_buy = data_unfiltered.drop(data_unfiltered.loc[data_unfiltered['product'] != 'PEARLS'].index)['bid_price_1']
-pearl_min_sell = data_unfiltered.drop(data_unfiltered.loc[data_unfiltered['product'] != 'PEARLS'].index)['ask_price_1']
-x_bananas = data_unfiltered.drop(data_unfiltered.loc[data_unfiltered['product'] != 'BANANAS'].index)['timestamp']
-y_bananas = data_unfiltered.drop(data_unfiltered.loc[data_unfiltered['product'] != 'BANANAS'].index)['mid_price']
-bananas_max_buy = data_unfiltered.drop(data_unfiltered.loc[data_unfiltered['product'] != 'BANANAS'].index)['bid_price_1']
-bananas_min_sell = data_unfiltered.drop(data_unfiltered.loc[data_unfiltered['product'] != 'BANANAS'].index)['ask_price_1']
+# x_pearls = data_unfiltered.drop(data_unfiltered.loc[data_unfiltered['product'] != 'PEARLS'].index)['timestamp']
+# y_pearls = data_unfiltered.drop(data_unfiltered.loc[data_unfiltered['product'] != 'PEARLS'].index)['mid_price']
+# # pearl_max_buy = data_unfiltered.drop(data_unfiltered.loc[data_unfiltered['product'] != 'PEARLS'].index)['bid_price_1']
+# # pearl_min_sell = data_unfiltered.drop(data_unfiltered.loc[data_unfiltered['product'] != 'PEARLS'].index)['ask_price_1']
+# x_bananas = data_unfiltered.drop(data_unfiltered.loc[data_unfiltered['product'] != 'BANANAS'].index)['timestamp']
+# y_bananas = data_unfiltered.drop(data_unfiltered.loc[data_unfiltered['product'] != 'BANANAS'].index)['mid_price']
+# bananas_max_buy = data_unfiltered.drop(data_unfiltered.loc[data_unfiltered['product'] != 'BANANAS'].index)['bid_price_1']
+# bananas_min_sell = data_unfiltered.drop(data_unfiltered.loc[data_unfiltered['product'] != 'BANANAS'].index)['ask_price_1']
+
+# x_coconuts = data_unfiltered.drop(data_unfiltered.loc[data_unfiltered['product'] != 'COCONUTS'].index)['timestamp']
+# y_coconuts = data_unfiltered.drop(data_unfiltered.loc[data_unfiltered['product'] != 'COCONUTS'].index)['mid_price']
+# x_pinas = data_unfiltered.drop(data_unfiltered.loc[data_unfiltered['product'] != 'PINA_COLADAS'].index)['timestamp']
+# y_pinas = data_unfiltered.drop(data_unfiltered.loc[data_unfiltered['product'] != 'PINA_COLADAS'].index)['mid_price']
+y_pinas = pd.Series
+
+for i in range(20):
+    if data_unfiltered.iloc[i]["product"] == "PINA_COLADAS":
+        # print(data_unfiltered.iloc[i]["mid_price"])
+        y_pinas.append([data_unfiltered.iloc[i]["mid_price"]], ignore_index=True)
+
 ## Plotting data for PEARLS and BANANAS side by side
 # figure, axis = plt.subplots(1, 2)
 # axis[0].plot(x_pearls, y_pearls)
@@ -51,10 +63,14 @@ bananas_min_sell = data_unfiltered.drop(data_unfiltered.loc[data_unfiltered['pro
 # axis[1].set_title("Market for BANANAS")
 
 amt = 100
-plt.plot(x_bananas.head(amt), y_bananas.head(amt), label="Min_sell")
-plt.plot(x_bananas.head(amt), bananas_max_buy.head(amt), label="Min_sell")
-plt.plot(x_bananas.head(amt), bananas_min_sell.head(amt), label="Min_sell")
-plt.xlabel("Time stamp")
-plt.ylabel("Mid_Price")
-plt.title("Market for pearls")
-plt.show()
+# figure, axis = plt.subplots(1, 2)
+# axis[0].plot(x_pinas, y_pinas)
+# axis[1].plot(x_coconuts, y_coconuts)
+# plt.plot(x_pinas, ratio)
+# plt.plot(x_pinas, y_pinas)
+# plt.plot(x_pinas, ratio)
+
+# plt.xlabel("Time stamp")
+# plt.ylabel("Mid_Price")
+plt.title("Market")
+# plt.show()

@@ -12,12 +12,10 @@ class Trader:
         self.profit = 0
 
         self.coconut_average = np.array([])
-        self.coconut_max_lot_size = 300
-        self.coconut_profit = 0
+        self.coconut_max_lot_size = 50
 
-        self.pina_average = np.array([])
-        self.pina_max_lot_size = 150
-        self.pina_profit = 0
+        self.pinas_average = np.array([])
+        self.pina_max_lot_size = 50
         # Variables for BLSH - PEARLS
         self.pmax = -1
         self.pmin = float('inf')
@@ -57,6 +55,24 @@ class Trader:
         
 
         # Calculate Revenue
+        current_holdings = 0
+        if pinas_position > 0:
+            current_holdings = current_holdings + min(state.order_depths.get(pinas).sell_orders.keys()) * pinas_position
+        else:
+            current_holdings = current_holdings + max(state.order_depths.get(pinas).buy_orders.keys()) * pinas_position
+        if coconuts_position > 0:
+            current_holdings = current_holdings + min(state.order_depths.get(coconuts).sell_orders.keys()) * coconuts_position
+        else:
+            current_holdings = current_holdings + max(state.order_depths.get(coconuts).buy_orders.keys()) * coconuts_position
+        if bananas_position > 0:
+            current_holdings = current_holdings + min(state.order_depths.get(bananas).sell_orders.keys()) * bananas_position
+        else:
+            current_holdings = current_holdings + max(state.order_depths.get(bananas).buy_orders.keys()) * bananas_position
+        if pearls_position > 0:
+            current_holdings = current_holdings + min(state.order_depths.get(pearls).sell_orders.keys()) * pearls_position
+        else:
+            current_holdings = current_holdings + max(state.order_depths.get(pearls).buy_orders.keys()) * pearls_position
+
         if state.own_trades is not None:
             for symbol in state.own_trades:
                 for trade in state.own_trades.get(symbol):
@@ -65,7 +81,8 @@ class Trader:
                             self.profit = self.profit - trade.price * trade.quantity
                         elif trade.buyer == "":  # "" << SUBMISSION
                             self.profit = self.profit + trade.price * trade.quantity
-        print("Profit: ", self.profit)
+
+        print("Profit: ", self.profit + current_holdings)
 
         print("Positions: ", state.position)
         print("Own trades: ", state.own_trades)
@@ -79,7 +96,7 @@ class Trader:
             order_depth: OrderDepth = state.order_depths[product]
 
             if product == bananas:  # SMA for BANANAS
-                if state.timestamp < self.warmup_period:
+                if len(self.average) < self.warmup_period / 100.0:
                     # Update the new SMA by treating the 'average' numpy array as a queue (FIFO)
                     mid_price = (min(order_depth.sell_orders.keys()) + max(order_depth.buy_orders.keys())) / 2.0
                     self.average = np.append(self.average, mid_price)
@@ -90,7 +107,6 @@ class Trader:
                     # Update SMA
                     self.average[:-1] = self.average[1:]
                     self.average[-1] = current_price
-                    print("self.average: ", self.average)
 
                     sma = np.average(self.average)
 
@@ -111,7 +127,7 @@ class Trader:
                     result[product] = orders
 
             if product == coconuts:  # SMA for COCONUTS
-                if state.timestamp < self.warmup_period:
+                if len(self.coconut_average) < self.warmup_period / 100.0:
                     # Update the new SMA by treating the 'average' numpy array as a queue (FIFO)
                     mid_price = (min(order_depth.sell_orders.keys()) + max(order_depth.buy_orders.keys())) / 2.0
                     self.coconut_average = np.append(self.coconut_average, mid_price)
@@ -122,7 +138,6 @@ class Trader:
                     # Update SMA
                     self.coconut_average[:-1] = self.coconut_average[1:]
                     self.coconut_average[-1] = current_price
-                    print("self.average: ", self.coconut_average)
 
                     sma = np.average(self.coconut_average)
 
@@ -143,7 +158,7 @@ class Trader:
                     result[product] = orders
 
             if product == pinas:  # SMA for PINAS
-                if state.timestamp < self.warmup_period:
+                if len(self.pinas_average) < self.warmup_period / 100.0:
                     # Update the new SMA by treating the 'average' numpy array as a queue (FIFO)
                     mid_price = (min(order_depth.sell_orders.keys()) + max(order_depth.buy_orders.keys())) / 2.0
                     self.pinas_average = np.append(self.pinas_average, mid_price)
@@ -154,7 +169,6 @@ class Trader:
                     # Update SMA
                     self.pinas_average[:-1] = self.pinas_average[1:]
                     self.pinas_average[-1] = current_price
-                    print("self.average: ", self.average)
 
                     sma = np.average(self.pinas_average)
 

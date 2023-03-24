@@ -12,8 +12,6 @@ class Trader:
         self.profit = 0
 
         # Variables for BLSH - PEARLS
-        self.pmax = -1
-        self.pmin = float('inf')
         self.price_range = 0
         self.epsilon = 0.4
         self.mid_range = [float('inf'), -1]
